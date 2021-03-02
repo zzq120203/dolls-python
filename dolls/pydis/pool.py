@@ -48,7 +48,7 @@ class RedisPool(object):
         else:
             raise TypeError('redis mode err')
 
-    def connection(self) -> Redis:
+    def __connection(self) -> Redis:
         if not self.__conn:
             if self.redis_mode == RedisMode.SENTINEL:
                 self.__conn = self.__pool.master_for(self.master_name, socket_timeout=self.timeout)
@@ -70,7 +70,7 @@ class RedisPool(object):
         :return:
         """
         if not self.__conn:
-            self.connection()
+            self.__connection()
         import redisgraph
         return redisgraph.Graph(name, self.__conn)
 
@@ -87,5 +87,5 @@ class RedisPool(object):
         :return:
         """
         if not self.__conn:
-            self.connection()
+            self.__connection()
         return Search(index_name, self.__conn)
