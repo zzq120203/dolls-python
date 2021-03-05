@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List, Tuple
 
 from redis import Redis, ConnectionPool
-from redis.sentinel import Sentinel
+from redis.sentinel import Sentinel, SentinelConnectionPool
 
 from .database import Database
 from .json import Json
@@ -37,7 +37,8 @@ class RedisPool(object):
         if self.redis_mode == RedisMode.SENTINEL:
             if urls is not List or urls is not Tuple:
                 raise TypeError("url : [('hostname', 6379),('hostname', 6378)]")
-            self.__pool = Sentinel(urls, socket_timeout=self.timeout, db=self.db)
+            sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db)
+            self.__pool = SentinelConnectionPool(master_name, sentinel)
         elif self.redis_mode == RedisMode.CLUSTER:
             pass
         elif self.redis_mode == RedisMode.STANDALONE:
@@ -50,12 +51,10 @@ class RedisPool(object):
 
     def __connection(self) -> Redis:
         if not self.__conn:
-            if self.redis_mode == RedisMode.SENTINEL:
-                self.__conn = self.__pool.master_for(self.master_name, socket_timeout=self.timeout)
+            if self.redis_mode == RedisMode.SENTINEL or self.redis_mode == RedisMode.STANDALONE:
+                self.__conn = Redis(connection_pool=self.__pool)
             elif self.redis_mode == RedisMode.CLUSTER:
                 pass
-            elif self.redis_mode == RedisMode.STANDALONE:
-                self.__conn = Redis(connection_pool=self.__pool)
             else:
                 raise TypeError('redis mode err')
         return self.__conn
@@ -89,3 +88,11 @@ class RedisPool(object):
         if not self.__conn:
             self.__connection()
         return Search(index_name, self.__conn)
+
+    def close(self):
+        """
+        关闭连接池和当前使用的连接
+        :return:
+        """
+        if self.__pool:
+            self.__pool.disconnect()
