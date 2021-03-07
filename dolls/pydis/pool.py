@@ -35,14 +35,14 @@ class RedisPool(object):
 
         self.__conn = None
         if self.redis_mode == RedisMode.SENTINEL:
-            if urls is not List or urls is not Tuple:
+            if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : [('hostname', 6379),('hostname', 6378)]")
             sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db)
             self.__pool = SentinelConnectionPool(master_name, sentinel)
         elif self.redis_mode == RedisMode.CLUSTER:
             pass
         elif self.redis_mode == RedisMode.STANDALONE:
-            if urls is not List or urls is not Tuple:
+            if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : ('hostname', 6379)")
             hostname, port = urls
             self.__pool = ConnectionPool(host=hostname, port=port, socket_timeout=self.timeout, db=self.db)
@@ -85,9 +85,7 @@ class RedisPool(object):
         RediSearch api @see https://github.com/RediSearch/redisearch-py
         :return:
         """
-        if not self.__conn:
-            self.__connection()
-        return Search(index_name, self.__conn)
+        return Search(index_name, self.__pool)
 
     def close(self):
         """
