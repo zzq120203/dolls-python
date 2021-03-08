@@ -6,7 +6,7 @@ class Database(Redis):
         """
         :param connection_pool:
         """
-        super().__init__(connection_pool)
+        super().__init__(connection_pool=connection_pool)
 
 
 
