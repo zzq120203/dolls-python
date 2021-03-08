@@ -94,6 +94,14 @@ class RedisPool(object):
         from .search import Search
         return Search(index_name, self.__pool)
 
+    def table(self, table_name):
+        """
+        :param table_name:
+        :return:
+        """
+        from .table import Table
+        return Table(self.search(table_name), table_name)
+
     def close(self):
         """
         关闭连接池和当前使用的连接

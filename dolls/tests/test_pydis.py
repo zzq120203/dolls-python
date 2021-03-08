@@ -5,6 +5,7 @@ from redisgraph import Node, Edge
 from rejson import Path
 
 from dolls.pydis import RedisPool
+from dolls.pydis.table import RTField, RTQuery
 
 
 class TestConnection(unittest.TestCase):
@@ -95,7 +96,7 @@ class TestRedisJson(unittest.TestCase):
 class TestRedisSearch(unittest.TestCase):
     def test_search(self):
         pool = RedisPool(urls=("localhost", 6379))
-        search = pool.search()
+        search = pool.search("def_index")
         self.assertIsNotNone(search)
         # IndexDefinition is available for RediSearch 2.0+
         definition = IndexDefinition(prefix=['doc:', 'article:'])
@@ -116,6 +117,53 @@ class TestRedisSearch(unittest.TestCase):
         self.assertEqual(res.total, 1)
         self.assertEqual(res.docs[0].title, "RediSearch")
 
+
+class TestTable(unittest.TestCase):
+    def test_create(self):
+        pool = RedisPool(urls=("localhost", 6379))
+
+
+        table = pool.table(table_name="test")
+        fields = [
+            RTField("ds_id", "int", primary_key=True),
+            RTField("ds_name", "str"),
+            RTField("ds_type", "int"),
+            RTField("ds_user", "str"),
+            RTField(name="ds_source", type="str")
+        ]
+        table.create(fields)
+        print(table.desc())
+        self.assertIsNotNone(table.desc())
+        pool.close()
+
+
+    def test_insert(self):
+        pool = RedisPool(urls=("localhost", 6379))
+        table = pool.table(table_name="test")
+        table.insert(mapping={
+            "ds_name": "test1",
+            "ds_type": 1,
+            "ds_user": "zzq",
+            "ds_source": "http://192.168.1.1:8979"
+        })
+        pool.close()
+
+    def test_search(self):
+        pool = RedisPool(urls=("localhost", 6379))
+        table = pool.table(table_name="test")
+
+        result = table.search(RTQuery("@ds_name:test1"))
+        for doc in result.docs:
+            print(doc.ds_source)
+        pool.close()
+
+    def test_drop(self):
+        pool = RedisPool(urls=("localhost", 6379))
+        table = pool.table(table_name="test")
+
+        table.drop()
+        print(table.desc())
+        pool.close()
 
 
 if __name__ == '__main__':
