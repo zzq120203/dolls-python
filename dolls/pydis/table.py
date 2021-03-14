@@ -1,6 +1,6 @@
 from typing import List, TypeVar
 
-import six
+from redis import ResponseError
 from redisearch import IndexDefinition, TextField, NumericField, Query
 
 RTQuery = Query
@@ -64,12 +64,12 @@ class Table(object):
     def __get_primary_key(self, primary_key=None):
         if not self.__primary_key:
             if not primary_key:
-                primary_key = self.__redis_search.hget('{}_info'.format(self.__table_name), "pk")
+                primary_key = self.__redis_search.hget(f'{self.__table_name}_info', "pk")
                 if not primary_key:
-                    assert ValueError("table is not exist")
+                    raise ValueError("table is not exist")
                 self.__primary_key = primary_key
             else:
-                self.__redis_search.hset('{}_info'.format(self.__table_name), "pk", primary_key)
+                self.__redis_search.hset(f'{self.__table_name}_info', "pk", primary_key)
                 self.__primary_key = primary_key
         return self.__primary_key
 
@@ -78,27 +78,35 @@ class Table(object):
         创建表
         :return:
         """
-        pk = [field for field in fields if field.primary_key]
-        if len(pk) == 0:
-            pk = "doc"
-        else:
-            pk = pk[0].name
-        self.__get_primary_key(pk)
-        definition = IndexDefinition(prefix=['{}:'.format(self.__get_primary_key()), 'article:'])
+        try:
+            pk = [field for field in fields if field.primary_key]
+            if len(pk) == 0:
+                pk = "doc"
+            else:
+                pk = pk[0].name
+            self.__get_primary_key(pk)
+            definition = IndexDefinition(prefix=[f'{self.__table_name}:', 'article:'], language="chinese")
 
-        fields = [field.to_search_field() for field in fields if not field.primary_key]
-        for f in fields:
-            print(f.redis_args())
-        self.__redis_search.create_index(fields, definition=definition)
+            fields = [field.to_search_field() for field in fields]
+            self.__redis_search.create_index(fields, definition=definition)
+        except ResponseError as err:
+            if str(err).startswith("Index"):
+                raise ValueError("table already exists")
+            else:
+                raise err
 
     def desc(self):
         """
         表结构信息
         :return:
         """
-        res = self.__redis_search.execute_command('FT.INFO', self.__table_name)
-        it = six.moves.map(_to_string, res)
-        return dict(six.moves.zip(it, it))
+        try:
+            return self.__redis_search.desc()
+        except ResponseError as err:
+            if str(err) == "Unknown Index name":
+                return None
+            else:
+                raise err
 
     def insert(self, mapping):
         """
@@ -106,8 +114,9 @@ class Table(object):
         :param mapping:
         :return:
         """
-        primary_key = self.__redis_search.hincrby('{}_info'.format(self.__table_name), self.__get_primary_key())
-        self.__redis_search.hset('doc:{}'.format(primary_key), mapping=mapping)
+        primary_key = self.__redis_search.hincrby(f'{self.__table_name}_info', self.__get_primary_key())
+        mapping.update({self.__get_primary_key(): primary_key})
+        self.__redis_search.hset(f'{self.__table_name}:{primary_key}', mapping=mapping)
 
     def update(self, primary_key, mapping):
         """
@@ -116,28 +125,52 @@ class Table(object):
         :param primary_key:
         :return:
         """
-        self.__redis_search.hset('doc:{}'.format(primary_key), mapping=mapping)
+        mapping.update({self.__get_primary_key(): primary_key})
+        self.__redis_search.hset(f'{self.__table_name}:{primary_key}', mapping=mapping)
 
     def search(self, query):
         """
         https://oss.redislabs.com/redisearch/Query_Syntax/
         :return:
         """
-        return self.__redis_search.search(query)
+        try:
+            return self.__redis_search.search(query)
+        except ResponseError as err:
+            if str(err).endswith("index"):
+                return None
+            else:
+                raise err
+
+    def delete(self, primary_key=None):
+        """
+        删除数据
+        :param primary_key: 主键值
+        :return:
+        """
+        try:
+            if primary_key:
+                self.__redis_search.delete(f'{self.__table_name}:{primary_key}')
+                return 1
+            return 0
+        except ResponseError as err:
+            if str(err) == "Unknown Index name":
+                return 0
+            else:
+                raise err
 
     def drop(self):
         """
-
+        删除表
         :return:
         """
-        self.__redis_search.delete('{}_incr.{}'.format(self.__table_name, self.__get_primary_key()))
-        self.__redis_search.drop_index()
+        try:
+            self.__redis_search.delete(f'{self.__table_name}_info')
+            self.__redis_search.drop_index()
+            return 1
+        except ResponseError as err:
+            if str(err) == "Unknown Index name":
+                return 0
+            else:
+                raise err
 
 
-def _to_string(s):
-    if isinstance(s, six.string_types):
-        return s
-    elif isinstance(s, six.binary_type):
-        return s.decode('utf-8', 'ignore')
-    else:
-        return s  # Not a string we care about

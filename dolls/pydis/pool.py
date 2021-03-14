@@ -41,7 +41,7 @@ class RedisPool(object):
             sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db, decode_responses=decode_responses)
             self.__pool = SentinelConnectionPool(master_name, sentinel)
         elif self.redis_mode == RedisMode.CLUSTER:
-            raise TypeError("cluster is not supported")
+            raise NotImplementedError("cluster is not supported")
         elif self.redis_mode == RedisMode.STANDALONE:
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : ('hostname', 6379)")
