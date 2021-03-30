@@ -117,6 +117,7 @@ class Table(object):
         primary_key = self.__redis_search.hincrby(f'{self.__table_name}_info', self.__get_primary_key())
         mapping.update({self.__get_primary_key(): primary_key})
         self.__redis_search.hset(f'{self.__table_name}:{primary_key}', mapping=mapping)
+        return primary_key
 
     def update(self, primary_key, mapping):
         """

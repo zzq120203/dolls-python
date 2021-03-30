@@ -35,18 +35,20 @@ class RedisPool(object):
 
         self.__conn = None
         self.__pool = None
-        if self.redis_mode == RedisMode.SENTINEL:
+        if self.redis_mode == RedisMode.SENTINEL or self.redis_mode == 1:
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : [('hostname', 6379),('hostname', 6378)]")
-            sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db, decode_responses=decode_responses)
+            sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db,
+                                password=self.password, decode_responses=decode_responses)
             self.__pool = SentinelConnectionPool(master_name, sentinel)
-        elif self.redis_mode == RedisMode.CLUSTER:
+        elif self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
             raise NotImplementedError("cluster is not supported")
-        elif self.redis_mode == RedisMode.STANDALONE:
+        elif self.redis_mode == RedisMode.STANDALONE or self.redis_mode == 0:
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : ('hostname', 6379)")
             hostname, port = urls
-            self.__pool = ConnectionPool(host=hostname, port=port, socket_timeout=self.timeout, db=self.db,
+            self.__pool = ConnectionPool(host=hostname, port=port, socket_timeout=self.timeout,
+                                         password=self.password, db=self.db,
                                          decode_responses=decode_responses)
         else:
             raise TypeError('redis mode err')
