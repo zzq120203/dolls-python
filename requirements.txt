@@ -3,8 +3,4 @@
 rejson>=0.5.4
 redis>=3.5.3
 redisearch>=2.0.0
-six>=1.15.0
-graphene>=2.1.8
-fastapi>=0.63.0
-starlette>=0.13.6
-setuptools>=49.3.1
+redis-py-cluster>=2.1.2

@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from redis import Redis, ConnectionPool
 from redis.sentinel import Sentinel, SentinelConnectionPool
+from rediscluster import RedisCluster
 
 from .database import Database
 
@@ -14,11 +15,11 @@ class RedisMode(Enum):
 
 
 class RedisPool(object):
-    def __init__(self, urls, password=None, redis_mode=RedisMode.STANDALONE, timeout=5, master_name=None, db=0,
+    def __init__(self, urls, username=None, password=None, redis_mode=RedisMode.STANDALONE, timeout=5, master_name=None, db=0,
                  decode_responses=True):
         """
 
-        :param urls: redis 地址 ('hostname', 6379) 或 [('hostname', 6379),('hostname', 6378)]
+        :param urls: redis 地址 ('hostname', 6379) 或 [('hostname', 6379),('hostname', 6378)] 或 [{"host": "127.0.0.1", "port": "7000"}, {"host": "127.0.0.1", "port": "7001"}]
         :param password: auth
         :param redis_mode: @see RedisMode
         :param timeout:
@@ -27,6 +28,7 @@ class RedisPool(object):
         :param decode_responses:
         """
         self.urls = urls
+        self.username = username
         self.password = password
         self.redis_mode = redis_mode
         self.timeout = timeout
@@ -35,20 +37,35 @@ class RedisPool(object):
 
         self.__conn = None
         self.__pool = None
+        self.__cluster = None
         if self.redis_mode == RedisMode.SENTINEL or self.redis_mode == 1:
+            if isinstance(urls, str):
+                urls = [url.split(":") for url in urls.split(";")]
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : [('hostname', 6379),('hostname', 6378)]")
-            sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db,
+            sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db, username=username,
                                 password=self.password, decode_responses=decode_responses)
-            self.__pool = SentinelConnectionPool(master_name, sentinel)
+            self.__pool = SentinelConnectionPool(master_name, sentinel, password=self.password)
         elif self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
-            raise NotImplementedError("cluster is not supported")
+            if isinstance(urls, str):
+                def addr(url):
+                    _host, _port = url.split(":")
+                    return {"host" : _host, "port": _port}
+                urls = [addr(url) for url in urls.split(";")]
+
+            if not isinstance(urls, List) and not isinstance(urls, Tuple):
+                raise TypeError('url : [{"host": "127.0.0.1", "port": "7000"}, {"host": "127.0.0.1", "port": "7001"}]')
+            self.__cluster = RedisCluster(startup_nodes = urls,decode_responses=decode_responses,
+                                          socket_timeout=self.timeout, db=self.db, username=username,
+                                          password=self.password)
         elif self.redis_mode == RedisMode.STANDALONE or self.redis_mode == 0:
+            if isinstance(urls, str):
+                urls = urls.split(":")
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : ('hostname', 6379)")
             hostname, port = urls
             self.__pool = ConnectionPool(host=hostname, port=port, socket_timeout=self.timeout,
-                                         password=self.password, db=self.db,
+                                         password=self.password, db=self.db, username=username,
                                          decode_responses=decode_responses)
         else:
             raise TypeError('redis mode err')
@@ -63,8 +80,11 @@ class RedisPool(object):
                 raise TypeError('redis mode err')
         return self.__conn
 
-    def database(self) -> Database:
-        return Database(self.__pool)
+    def database(self) -> Union[Database, RedisCluster]:
+        if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
+            return self.__cluster
+        else:
+            return Database(self.__pool)
 
     def graph(self, name):
         """
@@ -73,10 +93,13 @@ class RedisPool(object):
         :param name:
         :return:
         """
+        if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
+            raise NotImplementedError("cluster is not supported")
         if not self.__conn:
             self.__connection()
-        import redisgraph
-        return redisgraph.Graph(name, self.__conn)
+
+        from redisgraph import Graph
+        return Graph(name, self.__conn)
 
     def json(self):
         """
@@ -84,6 +107,9 @@ class RedisPool(object):
         pip install rejson
         :return:
         """
+        if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
+            raise NotImplementedError("cluster is not supported")
+
         from .json import Json
         return Json(self.__pool)
 
@@ -93,6 +119,9 @@ class RedisPool(object):
         pip install redisearch
         :return:
         """
+        if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
+            raise NotImplementedError("cluster is not supported")
+
         from .search import Search
         return Search(index_name, self.__pool)
 
@@ -101,6 +130,9 @@ class RedisPool(object):
         :param table_name:
         :return:
         """
+        if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
+            raise NotImplementedError("cluster is not supported")
+
         from .table import Table
         return Table(self.search(table_name), table_name)
 
@@ -111,3 +143,5 @@ class RedisPool(object):
         """
         if self.__pool:
             self.__pool.disconnect()
+        if self.__cluster:
+            self.__cluster.close()
