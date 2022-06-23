@@ -2,6 +2,7 @@ import six
 from redis import Redis
 from redisearch import Client
 
+
 def to_string(s):
     if isinstance(s, six.string_types):
         return s
@@ -28,4 +29,3 @@ class Search(Redis, Client):
     def table(self):
         from .table import Table
         return Table(self, self.index_name)
-

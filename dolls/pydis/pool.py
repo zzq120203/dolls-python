@@ -1,9 +1,8 @@
 from enum import Enum
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 from redis import Redis, ConnectionPool
 from redis.sentinel import Sentinel, SentinelConnectionPool
-from rediscluster import RedisCluster
 
 from .database import Database
 
@@ -15,17 +14,27 @@ class RedisMode(Enum):
 
 
 class RedisPool(object):
-    def __init__(self, urls, username=None, password=None, redis_mode=RedisMode.STANDALONE, timeout=5, master_name=None, db=0,
-                 decode_responses=True):
+    def __init__(self, urls,
+                 username=None,
+                 password=None,
+                 redis_mode=RedisMode.STANDALONE,
+                 timeout=5,
+                 master_name=None,
+                 db=0,
+                 decode_responses=True,
+                 **kwargs):
         """
 
-        :param urls: redis 地址 ('hostname', 6379) 或 [('hostname', 6379),('hostname', 6378)] 或 [{"host": "127.0.0.1", "port": "7000"}, {"host": "127.0.0.1", "port": "7001"}]
+        :param urls: redis 地址 ('hostname', 6379)
+            或 [('hostname', 6379),('hostname', 6378)]
+            或 [{"host": "127.0.0.1", "port": "7000"}, {"host": "127.0.0.1", "port": "7001"}]
         :param password: auth
         :param redis_mode: @see RedisMode
         :param timeout:
         :param master_name:
         :param db:
         :param decode_responses:
+        :param kwargs:
         """
         self.urls = urls
         self.username = username
@@ -44,29 +53,34 @@ class RedisPool(object):
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : [('hostname', 6379),('hostname', 6378)]")
             sentinel = Sentinel(urls, socket_timeout=self.timeout, db=self.db, username=username,
-                                password=self.password, decode_responses=decode_responses)
-            self.__pool = SentinelConnectionPool(master_name, sentinel, password=self.password)
+                                password=self.password, decode_responses=decode_responses, **kwargs)
+            self.__pool = SentinelConnectionPool(master_name, sentinel, username=username, password=self.password,
+                                                 decode_responses=decode_responses, db=self.db, **kwargs)
         elif self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
             if isinstance(urls, str):
                 def addr(url):
                     _host, _port = url.split(":")
-                    return {"host" : _host, "port": _port}
+                    return {"host": _host, "port": _port}
+
                 urls = [addr(url) for url in urls.split(";")]
 
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError('url : [{"host": "127.0.0.1", "port": "7000"}, {"host": "127.0.0.1", "port": "7001"}]')
-            self.__cluster = RedisCluster(startup_nodes = urls,decode_responses=decode_responses,
+            from rediscluster import RedisCluster
+            self.__cluster = RedisCluster(startup_nodes=urls, decode_responses=decode_responses,
                                           socket_timeout=self.timeout, db=self.db, username=username,
-                                          password=self.password)
+                                          password=self.password, **kwargs)
         elif self.redis_mode == RedisMode.STANDALONE or self.redis_mode == 0:
             if isinstance(urls, str):
+                if ";" in urls:
+                    raise TypeError("url = 'hostname:port' or mode = RedisMode.CLUSTER")
                 urls = urls.split(":")
             if not isinstance(urls, List) and not isinstance(urls, Tuple):
                 raise TypeError("url : ('hostname', 6379)")
             hostname, port = urls
             self.__pool = ConnectionPool(host=hostname, port=port, socket_timeout=self.timeout,
                                          password=self.password, db=self.db, username=username,
-                                         decode_responses=decode_responses)
+                                         decode_responses=decode_responses, **kwargs)
         else:
             raise TypeError('redis mode err')
 
@@ -80,7 +94,7 @@ class RedisPool(object):
                 raise TypeError('redis mode err')
         return self.__conn
 
-    def database(self) -> Union[Database, RedisCluster]:
+    def database(self) -> Redis:
         if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
             return self.__cluster
         else:

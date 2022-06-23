@@ -1,6 +1,4 @@
 # pip install -r requirements.txt
 
-rejson>=0.5.4
-redis>=3.5.3
-redisearch>=2.0.0
-redis-py-cluster>=2.1.2
+redis-py-cluster>=2.1.0
+pydantic>=1.9.0
