@@ -33,6 +33,10 @@ class Gos(object):
         self.aps.add_job(self.__login, 'interval', seconds=5 * 60)
         self.aps.start()
 
+    def close(self):
+        self.aps.shutdown()
+        self.__logout()
+
     def __login(self) -> None:
         """
         gos login return token
