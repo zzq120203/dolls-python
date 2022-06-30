@@ -1,12 +1,17 @@
+# !/usr/bin/env Python3
+# -*- coding: utf-8 -*-
+# @Author   : zhangzhanqi
+# @FILE     : aiogos.py
+# @Time     : 2022/6/30 16:01
 import uuid
 from typing import Any, Union, Final
 
-import requests
-from apscheduler.schedulers.background import BackgroundScheduler
+import aiohttp
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from yarl import URL
 
 
-class Gos(object):
+class GosAsync(object):
     def __init__(
             self,
             url: str,
@@ -29,32 +34,36 @@ class Gos(object):
 
         self.token = None
 
-        self.aps = BackgroundScheduler()
+        self.aps = AsyncIOScheduler()
         self.aps.add_job(self.__login, 'interval', seconds=5 * 60)
         self.aps.start()
 
-    def __login(self) -> None:
+    async def close(self):
+        self.aps.shutdown()
+        await self.__logout()
+
+    async def __login(self) -> None:
         """
         gos login return token
         POST /api/v1/login
         :return: stats, token
         """
         url = self.base_url / "login"
-        result = requests.post(
-            url=url,
-            json={"user": self.user, "password": self.password},
-        ).json()
+        body = {"user": self.user, "password": self.password}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=body) as response:
+                result = await response.json()
 
-        stats = result.get("state", 1)
-        if not stats == 0:
-            raise BaseException(result.get("info", "unknown"))
+                stats = result.get("state", 1)
+                if not stats == 0:
+                    raise BaseException(result.get("info", "unknown"))
 
-        self.token = result.get("token", None)
+                self.token = result.get("token", None)
 
     async def __logout(self) -> None:
         pass
 
-    def put(
+    async def put(
             self,
             data: bytes,
             namespace: str = None,
@@ -92,21 +101,14 @@ class Gos(object):
         headers = {
             "Content-Type": content_type
         }
-        result = requests.post(
-            url=url,
-            data=data,
-            headers=headers,
-        )
 
-        stats = result.status_code
-        if stats == 401:
-            self.__login()
-            return self.put(data, namespace, key, content_type, prop)
-        elif not stats == 200:
-            raise BaseException(result.text)
-        return key
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.post(url, data=data) as response:
+                if response.status != 200:
+                    raise BaseException(await response.text())
+                return await response.json()
 
-    def get(
+    async def get(
             self,
             key: str,
             namespace: str = None,
@@ -114,7 +116,7 @@ class Gos(object):
     ) -> Union[bytes, None]:
         """
         GET /api/v1/get
-        :param is_url: 
+        :param is_url:
         :param namespace: namespace
         :param key: 对象的key
         :param intent:
@@ -147,13 +149,11 @@ class Gos(object):
             "key": key
         }
         url = self.base_url / "get" % params
-        result = requests.get(
-            url=url,
-        )
-        stats = result.status_code
-        if stats == 200:
-            raise BaseException(result.text)
-        return result.content
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise BaseException(await response.text())
+                return await response.read()
 
     def obj_uri(
             self,
