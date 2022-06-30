@@ -7,10 +7,12 @@ from typing import Optional, Dict, Any
 
 from pydantic import BaseModel, validator, AnyUrl
 
-SUPPORT_DB = ['mysql',
-              'pg', 'postgres', 'pgsql', 'postgresql',
-              'oracle',
-              ]
+
+class SQLUrl(AnyUrl):
+    allowed_schemes = {'mysql',
+                       'pg', 'postgres', 'pgsql', 'postgresql',
+                       'oracle', }
+    host_required = False
 
 
 class DBConfig(BaseModel):
@@ -21,21 +23,21 @@ class DBConfig(BaseModel):
     password: str = '123456'
     db: str = 'test'
 
-    url: Optional[AnyUrl] = None
+    url: Optional[SQLUrl] = None
 
     @validator("url", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
 
-        schema = values.get('type', 'mysql')
-        if schema == 'mysql':
-            schema = 'mysql+pymysql'
-        elif schema in ['pg', 'postgres', 'pgsql', 'postgresql']:
-            schema = 'postgresql+asyncpg'
+        scheme = values.get('type', 'mysql')
+        if scheme == 'mysql':
+            scheme = 'mysql+pymysql'
+        elif scheme in ['pg', 'postgres', 'pgsql', 'postgresql']:
+            scheme = 'postgresql+asyncpg'
 
-        return AnyUrl.build(
-            scheme=schema,
+        return SQLUrl.build(
+            scheme=scheme,
             user=values.get("user"),
             password=values.get("password"),
             host=values.get("host"),

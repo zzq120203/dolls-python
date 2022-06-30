@@ -7,16 +7,16 @@
 import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from .db_config import SUPPORT_DB, DBConfig
+from .db_config import DBConfig
 from .table_model import TYPE_RELATION
 
 
 class SQLAsync(object):
-    def __init__(self, config: DBConfig):
-        self.config = config
-        if self.config.type not in SUPPORT_DB:
-            raise Exception(f"db not in support db, "
-                            f"db: {self.config.type}, support: {SUPPORT_DB}")
+    def __init__(self, config: DBConfig = None, **kwargs):
+        if config is not None:
+            self.config = config
+        else:
+            self.config = DBConfig(**kwargs)
 
         self.engine = create_async_engine(self.config.url, echo=True)
 
