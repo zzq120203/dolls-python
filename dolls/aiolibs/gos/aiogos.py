@@ -3,6 +3,7 @@
 # @Author   : zhangzhanqi
 # @FILE     : aiogos.py
 # @Time     : 2022/6/30 16:01
+import datetime
 import uuid
 from typing import Any, Union, Final
 
@@ -27,15 +28,15 @@ class GosAsync(object):
         assert url.scheme == "gos"
         self.user: Final[str] = url.user
         self.password: Final[str] = url.password
-        self.namespace: Final[str] = url.path
+        self.namespace: Final[str] = url.path[1:]
         self.version: Final[str] = version
 
         self.base_url: Final[URL] = URL(f"http://{url.host}:{url.port}/api/{self.version}")
 
         self.token = None
 
-        self.aps = AsyncIOScheduler()
-        self.aps.add_job(self.__login, 'interval', seconds=5 * 60)
+        self.aps = AsyncIOScheduler(timezone='Asia/Shanghai')
+        self.aps.add_job(self.__login, 'interval', seconds=5 * 60, next_run_time=datetime.datetime.now())
         self.aps.start()
 
     async def close(self):
@@ -160,7 +161,7 @@ class GosAsync(object):
             key: str,
             namespace: str = None,
             intent: int = 11,
-    ) -> URL:
+    ) -> str:
 
         ns = namespace or self.namespace
         if ns is None:
@@ -175,4 +176,4 @@ class GosAsync(object):
             "intent": intent,
             "key": key
         }
-        return self.base_url / "get" % params
+        return str(self.base_url / "get" % params)

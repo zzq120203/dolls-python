@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from typing import Any, Union, Final
 
@@ -22,15 +23,15 @@ class Gos(object):
         assert url.scheme == "gos"
         self.user: Final[str] = url.user
         self.password: Final[str] = url.password
-        self.namespace: Final[str] = url.path
+        self.namespace: Final[str] = url.path[1:]
         self.version: Final[str] = version
 
         self.base_url: Final[URL] = URL(f"http://{url.host}:{url.port}/api/{self.version}")
 
         self.token = None
 
-        self.aps = BackgroundScheduler()
-        self.aps.add_job(self.__login, 'interval', seconds=5 * 60)
+        self.aps = BackgroundScheduler(timezone='Asia/Shanghai')
+        self.aps.add_job(self.__login, 'interval', seconds=5 * 60, next_run_time=datetime.datetime.now())
         self.aps.start()
 
     def close(self):
@@ -43,7 +44,7 @@ class Gos(object):
         POST /api/v1/login
         :return: stats, token
         """
-        url = self.base_url / "login"
+        url = str(self.base_url / "login")
         result = requests.post(
             url=url,
             json={"user": self.user, "password": self.password},
@@ -91,7 +92,7 @@ class Gos(object):
             "ns": ns,
             "key": key
         }
-        url = self.base_url / "put" % params
+        url = str(self.base_url / "put" % params)
 
         headers = {
             "Content-Type": content_type
@@ -150,7 +151,7 @@ class Gos(object):
             "intent": intent,
             "key": key
         }
-        url = self.base_url / "get" % params
+        url = str(self.base_url / "get" % params)
         result = requests.get(
             url=url,
         )
@@ -164,7 +165,7 @@ class Gos(object):
             key: str,
             namespace: str = None,
             intent: int = 11,
-    ) -> URL:
+    ) -> str:
 
         ns = namespace or self.namespace
         if ns is None:
@@ -179,4 +180,4 @@ class Gos(object):
             "intent": intent,
             "key": key
         }
-        return self.base_url / "get" % params
+        return str(self.base_url / "get" % params)

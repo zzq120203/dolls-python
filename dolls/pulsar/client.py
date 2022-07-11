@@ -39,11 +39,11 @@ class PProducer(object):
         )
 
     # 生产数据
-    def send(self, data, sync: bool = True):
-        if sync:
-            self.__producer.send(data)
+    def send(self, data, callback=None):
+        if callback:
+            self.__producer.send_async(data, callback)
         else:
-            self.__producer.send_async(data, self.callback)
+            self.__producer.send(data)
 
     # 释放资源
     def stop(self):
@@ -102,6 +102,9 @@ class PConsumer(object):
             msg = self.__consumer.receive()
             data = msg.value()
             b = consumer_fun(data)
+            if not isinstance(b, bool):
+                self.__consumer.acknowledge(msg)
+                break
             if b:
                 self.__consumer.acknowledge(msg)
             else:
@@ -114,6 +117,9 @@ class PConsumer(object):
                 msg = self.__consumer.receive(timeout_millis=int(timeout * 1000))
                 data = msg.value()
                 b = await consumer_fun(data)
+                if not isinstance(b, bool):
+                    self.__consumer.acknowledge(msg)
+                    break
                 if b:
                     self.__consumer.acknowledge(msg)
                 else:

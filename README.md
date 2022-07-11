@@ -1,7 +1,10 @@
 # Redis API
-集成 [redis-py](https://github.com/andymccurdy/redis-py), [RediSearch](https://github.com/RediSearch/redisearch-py), [RedisGraph](https://github.com/RedisGraph/redisgraph-py), [RedisJson](https://github.com/RedisJSON/redisjson-py)
+
+集成 [redis-py](https://github.com/andymccurdy/redis-py), [RediSearch](https://github.com/RediSearch/redisearch-py)
+, [RedisGraph](https://github.com/RedisGraph/redisgraph-py), [RedisJson](https://github.com/RedisJSON/redisjson-py)
 
 1.redis connection
+
 ```python
 from dolls.pydis import RedisPool
 
@@ -20,6 +23,7 @@ db.set("key1", "value1")
 
 2.redis graph
 > 参考redisgraph-py 文档
+
 ```python
 from dolls.pydis import RedisPool
 from redisgraph import Node
@@ -31,7 +35,8 @@ graph.add_node(node1)
 ```
 
 3.redis json
->参考rejson 文档
+> 参考rejson 文档
+
 ```python
 from dolls.pydis import RedisPool
 from rejson import Path
@@ -39,17 +44,18 @@ from rejson import Path
 pool = RedisPool(urls=("localhost", 6379))
 json = pool.json()
 obj = {
-   'answer': 42,
-   'arr': [None, True, 3.14],
-   'truth': {
-       'coord': 'out there'
-   }
+    'answer': 42,
+    'arr': [None, True, 3.14],
+    'truth': {
+        'coord': 'out there'
+    }
 }
 json.jsonset('obj', Path.rootPath(), obj)
 ```
 
 4.redis search
 > 参考 redisearch-py 文档
+
 ```python
 from dolls.pydis import RedisPool
 from redisearch import TextField, IndexDefinition, Query
@@ -79,10 +85,62 @@ print(res.docs[0].title)
 q = Query("search engine").verbatim().no_content().with_scores().paging(0, 5)
 res = search.search(q)
 ```
+
 5.关闭连接
+
 ```python
 from dolls.pydis import RedisPool
 
 pool = RedisPool(urls=("localhost", 6379))
 pool.close()
+```
+
+# aiosql
+
+1. 创建连接
+
+```python
+from dolls.aiolibs.aiosql import SQLAsync, DBConfig
+
+config = DBConfig(
+    type="mysql",
+    host="host", port=6379,
+    user="user", password="password",
+    db="database"
+)
+
+client = SQLAsync(config=config)
+
+# or
+
+client = SQLAsync(
+    type="mysql",
+    host="localhost", port=6379,
+    user="user", password="password",
+    db="db"
+)
+
+# or 
+client = SQLAsync(url="mysql://root:123456@localhost:6379/db")
+
+```
+
+2. 创建table
+
+```python
+table_name = "test1"
+fields = [{"name": "column1", "type": "int", "primary_key": True, "comment": None}]
+
+table = client.table(table_name, fields)
+
+```
+
+2. 调用table
+
+```python
+
+# 插入数据
+async with client.engine.connect() as conn:
+    await conn.execute(table.insert(), [{}])
+
 ```

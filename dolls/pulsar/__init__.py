@@ -20,11 +20,11 @@ class Pulsar(object):
                 url = "pulsar://" + url
         self.__client = pulsar.Client(service_url=url, authentication=auth)
 
-    def producer(self, topic: str, schema=pulsar.schema.StringSchema(), max_message=1024 * 1024) -> PProducer:
-        return PProducer(client=self.__client, topic=topic, schema=schema, max_message=max_message)
+    def producer(self, topic: str, schema=pulsar.schema.StringSchema(), max_message=1024 * 1024, **kwargs) -> PProducer:
+        return PProducer(client=self.__client, topic=topic, schema=schema, max_message=max_message, **kwargs)
 
-    def consumer(self, topic: str, sub_name: str, schema=pulsar.schema.StringSchema()) -> PConsumer:
-        return PConsumer(client=self.__client, topic=topic, sub_name=sub_name, schema=schema)
+    def consumer(self, topic: str, sub_name: str, schema=pulsar.schema.StringSchema(), **kwargs) -> PConsumer:
+        return PConsumer(client=self.__client, topic=topic, sub_name=sub_name, schema=schema, **kwargs)
 
     def close(self):
         self.__client.close()

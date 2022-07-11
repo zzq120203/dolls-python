@@ -2,6 +2,4 @@
 # -*- coding: utf-8 -*-
 # @Author   : zhangzhanqi
 # @FILE     : __init__.py.py
-# @Time     : 2022/6/30 16:00
-
-from .aiogos import GosAsync
+# @Time     : 2022/7/4 14:40

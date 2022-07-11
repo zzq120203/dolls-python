@@ -19,7 +19,7 @@ requirements = list(map(str.strip, open("requirements.txt").readlines()))
 
 setup(
     name='dolls',
-    version='1.1.2',
+    version='1.2.0',
     description='python tools',
     long_description=read_all("README.md"),
     long_description_content_type='text/markdown',
