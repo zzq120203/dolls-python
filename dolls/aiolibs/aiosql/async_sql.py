@@ -8,7 +8,7 @@ import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from .db_config import DBConfig
-from .table_model import TYPE_RELATION
+from .table_model import get_field_type
 
 
 class SQLAsync(object):
@@ -32,8 +32,10 @@ class SQLAsync(object):
             return self.tables[name]
         columns = []
         for field in fields:
-            column = sqlalchemy.Column(field.get('name'), TYPE_RELATION.get(field.get('type')),
-                                       primary_key=field.get('primary_key', False), comment=field.get('comment', None))
+            column = sqlalchemy.Column(
+                field.get('name'), get_field_type(field.get('type')),
+                primary_key=field.get('primary_key', False), comment=field.get('comment', None)
+            )
 
             columns.append(column)
 
