@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from yarl import URL
 
 
-class GosAsync(object):
+class AsyncGos(object):
     def __init__(
             self,
             url: str,

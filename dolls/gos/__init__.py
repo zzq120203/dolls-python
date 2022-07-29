@@ -4,4 +4,5 @@
 # @FILE     : __init__.py.py
 # @Time     : 2022/6/16 10:51
 
-from .gos import Gos
+from .client import Gos
+from .aiogos import AsyncGos
