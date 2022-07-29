@@ -124,7 +124,7 @@ class RedisPool(object):
         if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
             raise NotImplementedError("cluster is not supported")
 
-        from .json import Json
+        from dolls.redis.pulgins.json import Json
         return Json(self.__pool)
 
     def search(self, index_name):
@@ -136,7 +136,7 @@ class RedisPool(object):
         if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
             raise NotImplementedError("cluster is not supported")
 
-        from .search import Search
+        from dolls.redis.pulgins.search import Search
         return Search(index_name, self.__pool)
 
     def table(self, table_name):
@@ -147,7 +147,7 @@ class RedisPool(object):
         if self.redis_mode == RedisMode.CLUSTER or self.redis_mode == 2:
             raise NotImplementedError("cluster is not supported")
 
-        from .table import Table
+        from dolls.redis.pulgins.table import Table
         return Table(self.search(table_name), table_name)
 
     def close(self):
