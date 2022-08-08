@@ -17,16 +17,11 @@ def from_url(url: str, **kwargs) -> RedisPool:
     :return: RedisPool
     """
     parsed = urlparse(url)
-    if "@" in parsed.netloc:
-        auth, urls = parsed.netloc.split("@")
-        user, password = auth.split(":")
-        if user == "":
-            user = None
-        if password == "":
-            password = None
-    else:
-        urls = parsed.netloc
-        user, password = None, None
+    user = parsed.username
+    password = parsed.password
+    urls = parsed.netloc
+    if "@" in urls:
+        urls = urls.split("@")[-1]
     master = None
     db = 0
     if parsed.path:
