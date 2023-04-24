@@ -12,6 +12,7 @@ class Gos(object):
             self,
             url: str,
             version: str = "v1",
+            interval_seconds: int = 5 * 60,
             **kwargs
     ) -> None:
         """
@@ -21,17 +22,16 @@ class Gos(object):
         """
         url = URL(url)
         assert url.scheme == "gos"
-        self.user: Final[str] = url.user
-        self.password: Final[str] = url.password
-        self.namespace: Final[str] = url.path[1:]
-        self.version: Final[str] = version
+        self.user: Final[str] = url.user or kwargs.get("user", "root")
+        self.password: Final[str] = url.password or kwargs.get("user", "__gos__")
+        self.namespace: Final[str] = url.path[1:] or kwargs.get("namespace", "default")
+        self.version: Final[str] = url.query.get("version", version)
 
         self.base_url: Final[URL] = URL(f"http://{url.host}:{url.port}/api/{self.version}")
 
         self.token = None
-
         self.aps = BackgroundScheduler(timezone='Asia/Shanghai')
-        self.aps.add_job(self.__login, 'interval', seconds=5 * 60, next_run_time=datetime.datetime.now())
+        self.aps.add_job(self.__login, 'interval', seconds=interval_seconds, next_run_time=datetime.datetime.now())
         self.aps.start()
 
     def close(self):
@@ -104,10 +104,7 @@ class Gos(object):
         )
 
         stats = result.status_code
-        if stats == 401:
-            self.__login()
-            return self.put(data, namespace, key, content_type, prop)
-        elif not stats == 200:
+        if stats != 200:
             raise BaseException(result.text)
         return key
 
@@ -156,9 +153,43 @@ class Gos(object):
             url=url,
         )
         stats = result.status_code
-        if stats == 200:
+        if stats != 200:
             raise BaseException(result.text)
         return result.content
+
+    def pop(
+            self,
+            key: str,
+            namespace: str = None,
+    ) -> str:
+        """
+        GET /api/v1/pop
+        :param is_url:
+        :param namespace: namespace
+        :param key: 对象的key
+        :return:
+        """
+
+        ns = namespace or self.namespace
+        if ns is None:
+            raise BaseException("namespace must not be empty")
+
+        if self.token is None:
+            raise BaseException("token must not be None.")
+
+        params = {
+            "token": self.token,
+            "ns": ns,
+            "key": key
+        }
+        url = str(self.base_url / "pop" % params)
+        result = requests.get(
+            url=url,
+        )
+        stats = result.status_code
+        if stats != 200:
+            raise BaseException(result.text)
+        return key
 
     def obj_uri(
             self,

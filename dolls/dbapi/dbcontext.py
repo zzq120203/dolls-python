@@ -8,10 +8,15 @@ from urllib.parse import urlparse
 
 import sqlalchemy
 from pydantic import BaseModel, validator, AnyUrl
-from sqlalchemy.engine import CursorResult
+
+if sqlalchemy.__version__.startswith("1.4"):
+    from sqlalchemy.engine.cursor import CursorResult as Result
+else:
+    from sqlalchemy.engine.result import ResultProxy as Result
+
 
 POSTGRES_SCHEMES = {
-    'postgres',
+    'postgres'
     'postgresql',
     'postgresql+asyncpg',
     'postgresql+pg8000',
@@ -34,7 +39,7 @@ ORACLE_SCHEMES = {
 
 DAMENG_SCHEMES = {
     'dm',
-    'dm+dmpython'
+    'dm+dmPython'
 }
 
 ELASTICSEARCH_SCHEMES = {
@@ -64,7 +69,7 @@ class DBContext(BaseModel):
     @validator("scheme", pre=True)
     def parse_scheme(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return v
         url = values.get("url")
         p = urlparse(url)
         return p.scheme
@@ -126,13 +131,13 @@ class DBContext(BaseModel):
         )
 
     def is_mysql(self) -> bool:
-        return self.type in ['mysql']
+        return self.scheme in ['mysql']
 
     def is_postgresql(self):
-        return self.type in ['pg', 'postgres', 'pgsql', 'postgresql']
+        return self.scheme in ['pg', 'postgres', 'pgsql', 'postgresql']
 
     def is_elasticsearch(self):
-        return self.type in ['elasticsearch', 'es']
+        return self.scheme in ['elasticsearch', 'es']
 
 
 class SelectContext(sqlalchemy.sql.Select):
@@ -160,7 +165,7 @@ class SelectContext(sqlalchemy.sql.Select):
     def order_by(self, *clauses):
         return self
 
-    def execute(self, *multiparams, **params) -> CursorResult:
+    def execute(self, *multiparams, **params) -> Result:
         pass
 
 

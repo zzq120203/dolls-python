@@ -4,8 +4,8 @@ from redisearch import IndexDefinition, TextField
 from redisgraph import Node, Edge
 from rejson import Path
 
-from dolls.pydis import RedisPool
-from dolls.pydis.table import RTField, RTQuery
+from dolls.redis import RedisPool
+from dolls.redis.pulgins.table import RTField, RTQuery
 
 
 class TestConnection(unittest.TestCase):

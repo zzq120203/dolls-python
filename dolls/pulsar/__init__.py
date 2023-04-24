@@ -4,6 +4,7 @@
 # @FILE     : __init__.py.py
 # @Time     : 2022/6/16 10:52
 import pulsar
+
 from .client import PProducer, PConsumer
 
 
@@ -28,3 +29,7 @@ class Pulsar(object):
 
     def close(self):
         self.__client.close()
+
+
+def from_url(url: str, **kwargs) -> Pulsar:
+    return Pulsar(url=url, **kwargs)

@@ -3,10 +3,16 @@
 # @Author   : zhangzhanqi
 # @FILE     : __init__.py.py
 # @Time     : 2022/7/21 16:55
-from .dbcontext import DBContext
+import sqlalchemy
+
 from .client import Client as SQLClient
-from .async_client import Client as AsyncSQL
+from .dbcontext import DBContext, SQLUrl, TableContext, SelectContext
+
+if sqlalchemy.__version__.startswith("1.4"):
+    from .async_client import Client as AsyncSQL
 
 
-def from_url(url: str):
+def from_url(url: str, sync=False):
+    if sync:
+        return AsyncSQL(url=url)
     return SQLClient(url=url)

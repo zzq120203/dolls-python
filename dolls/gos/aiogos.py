@@ -26,10 +26,10 @@ class AsyncGos(object):
         """
         url = URL(url)
         assert url.scheme == "gos"
-        self.user: Final[str] = url.user
-        self.password: Final[str] = url.password
-        self.namespace: Final[str] = url.path[1:]
-        self.version: Final[str] = version
+        self.user: Final[str] = url.user or kwargs.get("user", "root")
+        self.password: Final[str] = url.password or kwargs.get("user", "__gos__")
+        self.namespace: Final[str] = url.path[1:] or kwargs.get("namespace", "default")
+        self.version: Final[str] = url.query.get("version", version)
 
         self.base_url: Final[URL] = URL(f"http://{url.host}:{url.port}/api/{self.version}")
 
@@ -155,6 +155,38 @@ class AsyncGos(object):
                 if response.status != 200:
                     raise BaseException(await response.text())
                 return await response.read()
+
+    async def pop(
+            self,
+            key: str,
+            namespace: str = None,
+    ) -> Union[bytes, None]:
+        """
+        GET /api/v1/pol
+        :param is_url:
+        :param namespace: namespace
+        :param key: 对象的key
+        :return:
+        """
+
+        ns = namespace or self.namespace
+        if ns is None:
+            raise BaseException("namespace must not be empty")
+
+        if self.token is None:
+            raise BaseException("token must not be None.")
+
+        params = {
+            "token": self.token,
+            "ns": ns,
+            "key": key
+        }
+        url = self.base_url / "pop" % params
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise BaseException(await response.text())
+                return key
 
     def obj_uri(
             self,

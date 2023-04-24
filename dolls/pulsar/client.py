@@ -83,17 +83,18 @@ class PConsumer(object):
             subscription_name=sub_name,
             consumer_type=kwargs.get("consumer_type", pulsar.ConsumerType.Exclusive),
             schema=schema,
-            message_listener=kwargs.get("consumer_type", None),
-            receiver_queue_size=kwargs.get("consumer_type", 1000),
-            max_total_receiver_queue_size_across_partitions=kwargs.get("consumer_type", 50000),
-            consumer_name=kwargs.get("consumer_type", None),
-            unacked_messages_timeout_ms=kwargs.get("consumer_type", None),
-            broker_consumer_stats_cache_time_ms=kwargs.get("consumer_type", 30000),
-            negative_ack_redelivery_delay_ms=kwargs.get("consumer_type", 60000),
-            is_read_compacted=kwargs.get("consumer_type", False),
-            properties=kwargs.get("consumer_type", None),
-            pattern_auto_discovery_period=kwargs.get("consumer_type", 60),
-            initial_position=kwargs.get("consumer_type", pulsar.InitialPosition.Latest)
+            message_listener=kwargs.get("message_listener", None),
+            receiver_queue_size=kwargs.get("receiver_queue_size", 1000),
+            max_total_receiver_queue_size_across_partitions=kwargs.get(
+                "max_total_receiver_queue_size_across_partitions", 50000),
+            consumer_name=kwargs.get("consumer_name", None),
+            unacked_messages_timeout_ms=kwargs.get("unacked_messages_timeout_ms", None),
+            broker_consumer_stats_cache_time_ms=kwargs.get("broker_consumer_stats_cache_time_ms", 30000),
+            negative_ack_redelivery_delay_ms=kwargs.get("negative_ack_redelivery_delay_ms", 60000),
+            is_read_compacted=kwargs.get("is_read_compacted", False),
+            properties=kwargs.get("properties", None),
+            pattern_auto_discovery_period=kwargs.get("pattern_auto_discovery_period", 60),
+            initial_position=kwargs.get("initial_position", pulsar.InitialPosition.Latest)
         )
 
     # 消费数据

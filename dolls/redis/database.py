@@ -1,5 +1,6 @@
-from redis import Redis
 import warnings
+
+from redis import Redis
 
 
 class Database(Redis):

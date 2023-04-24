@@ -1,47 +1,57 @@
-# Redis API
+# Dolls 
+## Redis API
 
 集成 [redis-py](https://github.com/andymccurdy/redis-py), [RediSearch](https://github.com/RediSearch/redisearch-py)
 , [RedisGraph](https://github.com/RedisGraph/redisgraph-py), [RedisJson](https://github.com/RedisJSON/redisjson-py)
 
-1.redis connection
+### 1.redis connection
 
+单机模式
 ```python
-from dolls.pydis import RedisPool
+from dolls import redis
 
-pool = RedisPool(urls=("localhost", 6379))
+pool = redis.from_url(url="redis://:pass@localhost:6379/0")
+db = pool.database()
+db.set("key1", "value1")
+```
+sentinel模式
+```python
+from dolls import redis
+# scheme: redis++sentinel or rediss
+pool = redis.from_url(url="redis++sentinel://:pass@localhost:6379;localhost:6380/0")
+db = pool.database()
+db.set("key1", "value1")
+```
+cluster模式
+```python
+from dolls import redis
+# scheme: redis++cluster or redisc
+pool = redis.from_url(url="redis++cluster://:pass@localhost:6379;localhost:6380/0")
 db = pool.database()
 db.set("key1", "value1")
 ```
 
-```python
-from dolls.pydis import RedisPool, RedisMode
-
-pool = RedisPool(urls=("localhost", 6379), redis_mode=RedisMode.SENTINEL, master_name="master")
-db = pool.database()
-db.set("key1", "value1")
-```
-
-2.redis graph
+### 2.redis graph
 > 参考redisgraph-py 文档
 
 ```python
-from dolls.pydis import RedisPool
+from dolls import redis
 from redisgraph import Node
 
-pool = RedisPool(urls=("localhost", 6379))
+pool = redis.from_url(url="redis://:pass@localhost:6379/0")
 graph = pool.graph("index_name")
 node1 = Node()
 graph.add_node(node1)
 ```
 
-3.redis json
+### 3.redis json
 > 参考rejson 文档
 
 ```python
-from dolls.pydis import RedisPool
+from dolls import redis
 from rejson import Path
 
-pool = RedisPool(urls=("localhost", 6379))
+pool = redis.from_url(url="redis://:pass@localhost:6379/0")
 json = pool.json()
 obj = {
     'answer': 42,
@@ -53,14 +63,14 @@ obj = {
 json.jsonset('obj', Path.rootPath(), obj)
 ```
 
-4.redis search
+### 4.redis search
 > 参考 redisearch-py 文档
 
 ```python
-from dolls.pydis import RedisPool
+from dolls import redis
 from redisearch import TextField, IndexDefinition, Query
 
-pool = RedisPool(urls=("localhost", 6379))
+pool = redis.from_url(url="redis://:pass@localhost:6379/0")
 search = pool.search("index_name")
 
 # IndexDefinition is available for RediSearch 2.0+
@@ -86,46 +96,26 @@ q = Query("search engine").verbatim().no_content().with_scores().paging(0, 5)
 res = search.search(q)
 ```
 
-5.关闭连接
+### 5.关闭连接
 
 ```python
-from dolls.pydis import RedisPool
+from dolls import redis
 
-pool = RedisPool(urls=("localhost", 6379))
+pool = redis.from_url(url="redis://:pass@localhost:6379/0")
 pool.close()
 ```
 
-# aiosql
+## DB Api
 
-1. 创建连接
+### 1. 创建连接
 
 ```python
-from dolls.aiolibs.aiosql import SQLAsync, DBConfig
+from dolls import dbapi
 
-config = DBConfig(
-    type="mysql",
-    host="host", port=6379,
-    user="user", password="password",
-    db="database"
-)
-
-client = SQLAsync(config=config)
-
-# or
-
-client = SQLAsync(
-    type="mysql",
-    host="localhost", port=6379,
-    user="user", password="password",
-    db="db"
-)
-
-# or 
-client = SQLAsync(url="mysql://root:123456@localhost:6379/db")
-
+client = dbapi.from_url(url="mysql://root:123456@localhost:6379/db")
 ```
 
-2. 创建table
+### 2. 创建table
 
 ```python
 table_name = "test1"
@@ -135,7 +125,7 @@ table = client.table(table_name, fields)
 
 ```
 
-2. 调用table
+### 3. 调用table
 
 ```python
 
@@ -144,3 +134,13 @@ async with client.engine.connect() as conn:
     await conn.execute(table.insert(), [{}])
 
 ```
+
+## Gos Api
+### 1. 创建连接
+
+```python
+from dolls import gos
+
+client = gos.from_url(url="mysql://root:123456@localhost:6379/db")
+```
+
